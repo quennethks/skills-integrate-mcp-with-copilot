@@ -3,6 +3,57 @@ document.addEventListener("DOMContentLoaded", () => {
   const activitySelect = document.getElementById("activity");
   const signupForm = document.getElementById("signup-form");
   const messageDiv = document.getElementById("message");
+  const authForm = document.getElementById("auth-form");
+  const authStatus = document.getElementById("auth-status");
+  const nameGroup = document.getElementById("name-group");
+  const nameInput = document.getElementById("name");
+  const authEmailInput = document.getElementById("auth-email");
+  const passwordInput = document.getElementById("password");
+  const loginButton = document.getElementById("login-button");
+  const logoutButton = document.getElementById("logout-button");
+  let currentUser = null;
+
+  function renderAuth() {
+    if (currentUser) {
+      authStatus.textContent = `Signed in as ${currentUser.name} (${currentUser.role})`;
+      nameGroup.classList.add("hidden");
+      nameInput.required = false;
+      authEmailInput.disabled = true;
+      passwordInput.disabled = true;
+      authForm.querySelector("#register-button").classList.add("hidden");
+      loginButton.classList.add("hidden");
+      logoutButton.classList.remove("hidden");
+      return;
+    }
+
+    authStatus.textContent = "You are not signed in.";
+    nameGroup.classList.remove("hidden");
+    nameInput.required = true;
+    authEmailInput.disabled = false;
+    passwordInput.disabled = false;
+    authForm.querySelector("#register-button").classList.remove("hidden");
+    loginButton.classList.remove("hidden");
+    logoutButton.classList.add("hidden");
+  }
+
+  async function requestAuth(endpoint, body) {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.detail || "Authentication failed");
+    }
+    return result;
+  }
+
+  async function loadCurrentUser() {
+    const response = await fetch("/auth/me");
+    currentUser = response.ok ? await response.json() : null;
+    renderAuth();
+  }
 
   // Function to fetch activities from API
   async function fetchActivities() {
@@ -75,9 +126,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     try {
       const response = await fetch(
-        `/activities/${encodeURIComponent(
-          activity
-        )}/unregister?email=${encodeURIComponent(email)}`,
+        `/activities/${encodeURIComponent(activity)}/unregister`,
         {
           method: "DELETE",
         }
@@ -114,14 +163,11 @@ document.addEventListener("DOMContentLoaded", () => {
   signupForm.addEventListener("submit", async (event) => {
     event.preventDefault();
 
-    const email = document.getElementById("email").value;
     const activity = document.getElementById("activity").value;
 
     try {
       const response = await fetch(
-        `/activities/${encodeURIComponent(
-          activity
-        )}/signup?email=${encodeURIComponent(email)}`,
+        `/activities/${encodeURIComponent(activity)}/signup`,
         {
           method: "POST",
         }
@@ -155,6 +201,41 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
+  authForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    try {
+      currentUser = await requestAuth("/auth/register", {
+        name: nameInput.value,
+        email: authEmailInput.value,
+        password: passwordInput.value,
+      });
+      authForm.reset();
+      renderAuth();
+    } catch (error) {
+      authStatus.textContent = error.message;
+    }
+  });
+
+  loginButton.addEventListener("click", async () => {
+    try {
+      currentUser = await requestAuth("/auth/login", {
+        email: authEmailInput.value,
+        password: passwordInput.value,
+      });
+      renderAuth();
+    } catch (error) {
+      authStatus.textContent = error.message;
+    }
+  });
+
+  logoutButton.addEventListener("click", async () => {
+    await fetch("/auth/logout", { method: "POST" });
+    currentUser = null;
+    authForm.reset();
+    renderAuth();
+  });
+
   // Initialize app
+  loadCurrentUser();
   fetchActivities();
 });
