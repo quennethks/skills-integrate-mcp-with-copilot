@@ -12,7 +12,7 @@ A super simple FastAPI application that allows students to view and sign up for 
 1. Install the dependencies:
 
    ```
-   pip install fastapi uvicorn
+   pip install -r ../requirements.txt
    ```
 
 2. Run the application:
@@ -30,7 +30,12 @@ A super simple FastAPI application that allows students to view and sign up for 
 | Method | Endpoint                                                          | Description                                                         |
 | ------ | ----------------------------------------------------------------- | ------------------------------------------------------------------- |
 | GET    | `/activities`                                                     | Get all activities with their details and current participant count |
-| POST   | `/activities/{activity_name}/signup?email=student@mergington.edu` | Sign up for an activity                                             |
+| POST   | `/auth/register`                                                   | Create a student account and start a session                        |
+| POST   | `/auth/login`                                                      | Log in and start a session                                          |
+| POST   | `/auth/logout`                                                     | End the current session                                             |
+| GET    | `/auth/me`                                                         | Get the authenticated user                                          |
+| POST   | `/activities/{activity_name}/signup`                               | Sign up the authenticated student                                   |
+| DELETE | `/activities/{activity_name}/unregister`                           | Unregister the authenticated student                               |
 
 ## Data Model
 
@@ -47,4 +52,4 @@ The application uses a simple data model with meaningful identifiers:
    - Name
    - Grade level
 
-All data is stored in memory, which means data will be reset when the server restarts.
+User accounts and activity data are stored in memory, which means data will be reset when the server restarts. Set `SESSION_SECRET` to a long random value and `ADMIN_EMAILS` to a comma-separated list of administrator emails before deploying. Set `SESSION_COOKIE_SECURE=true` when serving over HTTPS.
